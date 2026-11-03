@@ -32,7 +32,7 @@ It is most useful when multiple agents share a local project or you regularly ha
 
 1. [Install Baton](#install-with-npx), including [the Antigravity instructions](#antigravity).
 2. [Ask your agents to use it](#how-to-use-baton-with-your-agents).
-3. Follow [the worked example](#worked-example-antigravity-hands-a-task-to-codex) if you want the exact CLI commands.
+3. Follow [the chat walkthrough](#example-antigravity-hands-a-task-to-codex). The [advanced CLI reference](docs/cli-walkthrough.md) is available for direct terminal use.
 
 ## Install with npx
 
@@ -103,102 +103,114 @@ These are coding-agent integrations that need a filesystem and shell. An ordinar
 ```sh
 git clone https://github.com/Harshit1garg1/Baton.git
 cd Baton
-python3 skills/baton/scripts/bootstrap.py --project /path/to/your/project
 ```
 
-Install `skills/baton/` in your agent's supported skills directory as well, or give the agent that folder's `SKILL.md`. On Windows, use `python` or `py -3` if `python3` is an unavailable Store alias.
+Copy the complete `skills/baton/` folder into your agent's supported skills directory, or give the agent that folder's `SKILL.md`. Then ask Baton to set up your working project. Direct bootstrap commands are in the [advanced CLI reference](docs/cli-walkthrough.md).
 
 ## How to use Baton with your agents
 
-Open the same local project in the participating agents. Give each agent a distinct collaborator ID, such as `pc1-antigravity` and `pc1-codex`, and tell them which task each should handle. Choose one lead to initialize a new board; other agents join the existing one using the same project key.
+Send requests in your agent's chat. The agent uses Baton and runs the Python engine for you.
 
-You can use ordinary prompts:
-
-| What you want | Example prompt |
+| Installation / agent | How to invoke the skill |
 | --- | --- |
-| Set up collaboration | "Use baton to inspect this project. If it has no board, initialize one with pc1-antigravity as lead; use pc1-codex for Codex. Tell me how the other agent should join." |
-| Start implementation | "Use baton to create and claim TASK-01 for the greeting helper in src/greet.py. Save meaningful progress on its task branch." |
-| Transfer unfinished work | "Use baton to hand TASK-01 to pc1-codex. Record the latest request, what you changed, and what remains." |
-| Resume as the receiver | "Use baton as pc1-codex. Run CheckOrContinue for TASK-01, read the handoff, and continue the remaining work." |
-| Request review | "Use baton to review the pinned TASK-01 commit as pc1-antigravity. Inspect the diff and relevant checks, then record your verdict." |
-| Deliver an accepted result | "I accept TASK-01. Use baton to squash-merge it into the base branch and push it. Report the local commit and verified delivery status." |
+| Antigravity project skill | `/baton` followed by your request. |
+| Codex installed skill | `$baton` followed by your request, or "Use baton to ...". |
+| Claude Code native plugin | `/baton:baton` followed by your request. |
+| Other shell-capable agents | "Use baton to ...", using that host's skill invocation if available. |
 
-The agents execute the engine commands. Baton does not start another agent or send it a message: open the receiving conversation and ask that agent to continue. Only the requested lead initializes a new board; joining agents should not reset it.
+The examples below use Antigravity's `/baton` prefix. Replace it with your agent's invocation from the table. Baton is one skill: the words after its name are requests the agent interprets, rather than separate built-in slash commands. Some hosts only autocomplete the skill name.
 
-## Worked example: Antigravity hands a task to Codex
+### Example: Antigravity hands a task to Codex
 
-Run these commands from **your working project's root**, after installing Baton. The example uses a Git repository with a baseline commit on `main` and a configured Git identity. If your base branch has another name, pass `--base-branch <name>` to the branch-backed workflow commands. The file `src/greet.py` is an example task path; use a task and file appropriate to your project.
+Open the same local project in both agents. Give them distinct IDs, such as `pc1-antigravity` and `pc1-codex`. One lead initializes a new board; the other joins it with the same project key. Your agent will ask for missing information rather than inventing a key or resetting an existing board.
 
-Use an available Python 3 interpreter throughout. On Windows, replace `python3` with `python` or `py -3` when needed. Replace the sample project key before setting up a real workspace.
+**1. Set up the collaboration.** In Antigravity:
 
-### 1. Set up the project and join
-
-For the project-local Skills CLI installation used by Codex and Antigravity:
-
-```sh
-python3 .agents/skills/baton/scripts/bootstrap.py --project .
+```text
+/baton init as pc1-antigravity for this project, with pc1-codex on the same PC.
 ```
 
-If bootstrap added the `.collab/` ignore rule, review and commit that `.gitignore` setup change before starting task branches. Save unrelated tracked edits separately as well: the final integration requires a clean checkout and task checkpoints only commit their owned files.
+In Codex:
 
-Initialize a **new** board, then have Codex join it:
-
-```sh
-python3 .collab/collab_engine.py --action InitFresh --local-path . --project-key "your-private-project-key" --collaborator-id pc1-antigravity --device-cluster-id pc1-local-cluster --local-agents antigravity,codex
-python3 .collab/collab_engine.py --action JoinExisting --local-path . --project-key "your-private-project-key" --collaborator-id pc1-codex --device-cluster-id pc1-local-cluster --same-device true
+```text
+$baton join this project's existing board as pc1-codex.
 ```
 
-For a native plugin or global skill installation, ask the agent to run the bootstrap from its installed skill directory instead. If the board already exists, join it; InitFresh intentionally refuses to overwrite it. Keep the real key private and out of committed files.
+**2. Create, claim and work on a task.** In Antigravity:
 
-### 2. Antigravity claims and checkpoints the task
-
-```sh
-python3 .collab/collab_engine.py --action AddTask --local-path . --task-id TASK-01 --task-title "Add greeting helper" --files src/greet.py
-python3 .collab/collab_engine.py --action SilentHandshake --local-path . --task-id TASK-01 --collaborator-id pc1-antigravity --git-branch
+```text
+/baton add TASK-01 "Add greeting helper" with files src/greet.py.
+/baton start TASK-01 as pc1-antigravity and implement the greeting helper.
+/baton checkpoint TASK-01 as pc1-antigravity with message "Greeting helper implemented".
 ```
 
-Antigravity now creates or edits `src/greet.py` and runs the relevant project checks. After a meaningful step, it saves a checkpoint:
+Baton checks ownership before work begins. The agent edits files and runs the relevant checks; checkpoints save meaningful progress on the task branch. For simultaneous branch-backed tasks, request an isolated worktree.
 
-```sh
-python3 .collab/collab_engine.py --action Checkpoint --local-path . --task-id TASK-01 --collaborator-id pc1-antigravity --commit-message "checkpoint: greeting helper implemented"
+**3. Hand the task over.** In Antigravity:
+
+```text
+/baton handover TASK-01 to pc1-codex. Record what you changed and that empty-name handling and project checks remain.
 ```
 
-Checkpoint commits the currently owned files on the task branch. Add `--push` when remote backup is wanted and a remote is configured. If another branch-backed task is already active in the shared checkout, start this task with `--use-worktree` and edit inside its recorded worktree directory.
+In Codex:
 
-### 3. Hand the task to Codex
-
-```sh
-python3 .collab/collab_engine.py --action AtomicHandoff --local-path . --task-id TASK-01 --collaborator-id pc1-antigravity --target-agent-id pc1-codex --reason "Continue in Codex" --last-prompt "Add a greeting helper" --changes-summary "Added the greeting helper" --remaining-todo "Handle empty names and run the project checks"
-python3 .collab/collab_engine.py --action CheckOrContinue --local-path . --task-id TASK-01 --collaborator-id pc1-codex
+```text
+$baton continue TASK-01 as pc1-codex and finish the remaining work.
+$baton checkpoint TASK-01 as pc1-codex with message "Finish greeting helper".
+$baton done TASK-01 as pc1-codex.
 ```
 
-Expected: ownership transfers to `pc1-codex` with file claims preserved; Codex receives `ACTION: CONTINUE_APPROVED` and the recorded context. If Antigravity later checks the same task, it receives `SKIP_ALREADY_HANDED_OFF`.
+The receiving agent checks the recorded ownership and context before continuing. The old agent's continuation check tells it to skip handed-off work. `done` submits the finished implementation for review.
 
-### 4. Finish, review, and deliver
+**4. Review it in another agent.** In Antigravity:
 
-Codex completes the remaining edits and runs the relevant project checks, then:
-
-```sh
-python3 .collab/collab_engine.py --action Checkpoint --local-path . --task-id TASK-01 --collaborator-id pc1-codex --commit-message "feat: finish greeting helper"
-python3 .collab/collab_engine.py --action Done --local-path . --task-id TASK-01 --collaborator-id pc1-codex
+```text
+/baton review TASK-01 as pc1-antigravity. Inspect the pinned commit and relevant check results, then record your verdict.
 ```
 
-Antigravity inspects the pinned commit and check results before approving:
+The reviewer can approve or request changes. If revisions are needed, ask the owner to reopen the task, revise it, checkpoint, and submit it again.
 
-```sh
-python3 .collab/collab_engine.py --action SubmitReview --local-path . --task-id TASK-01 --collaborator-id pc1-antigravity --review-verdict APPROVED --review-notes "Reviewed the helper and check results"
+**5. Deliver when you accept the result.** In Codex:
+
+```text
+I accept TASK-01. $baton merge TASK-01 as pc1-codex using squash and push it.
+$baton status
 ```
 
-Use `--review-verdict CHANGES_REQUESTED` when revisions are needed. The owner can reopen, checkpoint, and submit the updated work for review again.
+Baton reports the local commit and verified delivery status. Only a verified remote push is `DELIVERY: COMPLETE`; missing remotes and failed pushes remain `LOCAL_ONLY` or `INCOMPLETE`.
 
-Once you accept delivery and authorize its upload:
+Baton does not open or message another agent automatically. Open the receiving conversation and ask it to continue. Existing authorization for commits, merges, pushes and releases still comes from your conversation with the agent.
 
-```sh
-python3 .collab/collab_engine.py --action MergeTask --local-path . --task-id TASK-01 --collaborator-id pc1-codex --squash
-python3 .collab/collab_engine.py --action Status --local-path . --render-format CLI
-```
+### Chat action reference
 
-MergeTask attempts a push to `origin`. With no remote, it reports `DELIVERY: LOCAL_ONLY`; a failed push reports `INCOMPLETE`. Only verified remote delivery reports `COMPLETE`. Add `--use-worktree` when integration must preserve another task's shared checkout.
+Use your host's invocation prefix. Supply your collaborator ID and any other missing details when asked.
+
+| Request after `/baton` | What the agent runs |
+| --- | --- |
+| `init` | Set up the local engine and initialize a new board with `InitFresh`. |
+| `join as pc1-codex` | Join an existing board with `JoinExisting`. |
+| `status` / `tasks` | Inspect the board with `Status` / `Tasks`. |
+| `add TASK-01 "Title" with files src/file.py` | Add a task with `AddTask`; include dependencies when needed. |
+| `start TASK-01` | Claim the task with `SilentHandshake`, using a task branch for Git work. |
+| `checkpoint TASK-01 with message "Progress"` | Save owned files with `Checkpoint`; add "and push" when authorized remote backup is wanted. |
+| `progress TASK-01 to 60 percent` | Record progress and notes with `UpdateProgress`. |
+| `handover TASK-01 to pc1-codex` | Transfer claims and context with `AtomicHandoff`; `handoff` is an equivalent request. |
+| `continue TASK-01` | Run `CheckOrContinue` before resuming; respect its ownership decision. |
+| `done TASK-01` | Submit clean implementation work for review with `Done`. |
+| `review TASK-01` | Inspect the pinned work, then record `SubmitReview` as a different reviewer. |
+| `reopen TASK-01` | Reopen pending or reverted work with `ReopenTask`. |
+| `merge TASK-01 using squash and push` | Deliver an approved task with `MergeTask`, within the user's authorization. |
+| `release v1.0.0` | Name an accepted base-branch milestone with `ReleaseTag`; this action attempts upload. |
+| `revert TASK-01` | Create an undo commit with `RevertTask`; add "and push" when authorized. |
+| `recover v1.0.0 on branch recover/v1.0.0` | Branch from a milestone with `RecoverTag`. |
+| `release files src/file.py from TASK-01` | Intentionally release a file claim with `ReleaseFiles`. |
+| `resolve recovery` | Run `ResolveRecovery` after repairing the affected checkout. |
+| `abandon recovery` | Explicitly archive the journal and report remaining repairs; this does not repair the checkout. |
+| `selftest` | Run the engine's disposable 42-stage `SelfTest`. |
+| `packet TASK-01` | Render the task's handoff context with `WebPacket`. |
+| `reset workspace` | Archive and reset the board with `ResetWorkspace`; requires the lead and an explicit reset request. |
+
+For direct engine arguments, see [the skill instructions](skills/baton/SKILL.md) and the optional [advanced CLI walkthrough](docs/cli-walkthrough.md).
 
 ## How the workflow works
 
@@ -212,13 +224,7 @@ MergeTask attempts a push to `origin`. With no remote, it reports `DELIVERY: LOC
 
 User authorization for merging and publishing remains part of the agent conversation. Peer review alone does not authorize publication.
 
-After project setup, inspect the board with:
-
-```sh
-python3 .collab/collab_engine.py --action Status --local-path .
-```
-
-For the complete action table, see [the skill instructions](skills/baton/SKILL.md). For every available engine flag, use `python3 .collab/collab_engine.py --help`.
+After project setup, ask `/baton status` (using your host's invocation prefix). The [advanced CLI reference](docs/cli-walkthrough.md) covers direct terminal use.
 
 ## Honest support boundaries
 
@@ -237,24 +243,21 @@ Keep the live ledger local. Synced copies of `state-board.json` are backups, not
 
 If a command reports `RECOVERY_STATUS: UNRESOLVED`, preserve the named worktree and journal. Save needed edits and clean up the blocking state before retrying. Normal resolution refuses while that state is unresolved:
 
-```sh
-python3 .collab/collab_engine.py --action ResolveRecovery --local-path .
+```text
+/baton resolve recovery
 ```
 
 For deliberate abandonment after inspecting the situation:
 
-```sh
-python3 .collab/collab_engine.py --action ResolveRecovery --abandon-recovery --local-path .
+```text
+/baton abandon recovery
 ```
 
 Abandonment archives the journal under `.collab/snapshots/`, prints `RECOVERY_ABANDONED`, and lists remaining repairs. It leaves those repairs to you. Keep local keys and session files private; bootstrap ignores `.collab/` for this reason. Review before sharing board snapshots, which may contain prompts, paths and handoff notes.
 
 ## Verify or contribute
 
-```sh
-python3 -m unittest discover -s tests -v
-python3 skills/baton/scripts/collab_engine.py --action SelfTest
-```
+Ask `/baton selftest`, or run the [contributor commands](docs/cli-walkthrough.md#contributor-checks) from a cloned repository.
 
 CI runs installer tests and the engine's 42-stage suite on Windows and Linux. macOS installation uses the same Python bootstrap; no native macOS runner has been verified for this release. Process-termination recovery has been tested; physical power loss and filesystem corruption have not.
 

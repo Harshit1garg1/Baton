@@ -8,6 +8,32 @@ description: Coordinate coding agents on a shared local project with task owners
 
 Use the bundled Python engine as the authoritative local task ledger. Run commands explicitly; this skill does not start a daemon, detect model usage limits, or contact other agents automatically.
 
+## Interpret chat actions
+
+Users normally invoke this skill in chat, such as `/baton handover TASK-01 to pc1-codex`, `$baton continue TASK-01`, or `/baton:baton status`, depending on the host. Interpret the remaining words as an action request and execute the corresponding engine command for the user. These are requests to this one skill, not separate registered commands or terminal commands.
+
+| Requested action | Engine action |
+| --- | --- |
+| `init` | Bootstrap if needed; inspect the project; `InitFresh` only for a new board. |
+| `join` | `JoinExisting`. |
+| `status`, `tasks`, `packet TASK` | `Status`, `Tasks`, `WebPacket`. |
+| `add TASK "Title" with files ...` | `AddTask`, with dependencies when supplied. |
+| `start TASK`, `claim TASK` | `SilentHandshake`; use `--git-branch` for Git work and an isolated worktree when requested. Then implement only if the user asked for implementation. |
+| `checkpoint TASK with message ...` | `Checkpoint`; add `--push` only within the user's upload authorization. |
+| `progress TASK to 60 percent` | `UpdateProgress`, with a truthful progress figure and notes. |
+| `handover TASK to AGENT`, `handoff TASK to AGENT` | `AtomicHandoff`; include the current prompt, changes and remaining work from the conversation. |
+| `continue TASK`, `resume TASK` | `CheckOrContinue`; act on its ownership decision before editing. |
+| `done TASK` | Run relevant project checks, then `Done` when the implementation is ready. |
+| `review TASK` | Inspect the pinned changes and relevant checks as a different agent, then `SubmitReview`. |
+| `reopen TASK`, `merge TASK`, `release TAG`, `revert TASK`, `recover TAG` | `ReopenTask`, `MergeTask`, `ReleaseTag`, `RevertTask`, `RecoverTag` respectively. |
+| `release files ... from TASK` | `ReleaseFiles` for the specified claims. |
+| `resolve recovery` | `ResolveRecovery`; retain unresolved work and its journal if refused. |
+| `abandon recovery` | `ResolveRecovery --abandon-recovery` only when abandonment is explicitly requested. Report remaining repairs. |
+| `selftest` | `SelfTest`. |
+| `reset workspace` | `ResetWorkspace --confirm-reset` only for an explicit authorized reset by the lead. |
+
+Resolve task IDs and paths from the request and current board. Ask for genuinely missing information, such as a new project's key or an ambiguous collaborator identity. Always pass this conversation's collaborator ID explicitly to identity-bearing engine actions; another agent can have changed the shared local session's saved ID. Respect earlier authorization in the conversation. MergeTask and ReleaseTag attempt remote upload, so do not use them against a configured remote when the user's request forbids uploading.
+
 ## Set up a project
 
 Requirements: Python 3.10+ and Git. Select an available Python 3 interpreter (`python3`, `python`, or `py -3` on Windows); do not assume the Windows `python3` alias works.
@@ -62,4 +88,4 @@ For a branch-backed task using a worktree, edit and run project checks inside th
 - If recovery reports UNRESOLVED, preserve the journal and local files. Inspect the named checkout, save relevant edits, and retry after cleanup. Do not use abandonment as a substitute for preserving files.
 - ResetWorkspace archives the board and requires lead identity plus `--confirm-reset`; use it only when resetting the workspace is within the user's request.
 
-`/collab` phrases are shorthand for these engine actions where the host understands them, not a universally registered slash-command API. The skill requires a coding agent with filesystem and shell access.
+The skill requires a coding agent with filesystem and shell access. Use the host's actual skill invocation; `/baton` is not a universally registered terminal or chatbot API.
