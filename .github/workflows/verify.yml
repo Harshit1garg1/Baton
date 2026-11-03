@@ -1,0 +1,24 @@
+name: Verify skill and engine
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Installer preservation checks
+        run: python -m unittest discover -s tests -v
+      - name: Engine 42-stage self-test
+        run: python -u skills/baton/scripts/collab_engine.py --action SelfTest

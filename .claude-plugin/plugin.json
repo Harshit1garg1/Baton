@@ -1,0 +1,10 @@
+{
+  "name": "baton",
+  "version": "0.1.0",
+  "description": "Coordinate coding agents with task ownership, file claims, Git checkpoints, context handoffs and peer review.",
+  "author": { "name": "Harshit1garg1", "url": "https://github.com/Harshit1garg1" },
+  "homepage": "https://github.com/Harshit1garg1/baton",
+  "repository": "https://github.com/Harshit1garg1/baton",
+  "license": "Apache-2.0",
+  "keywords": ["ai-agents", "multi-agent", "collaboration", "codex", "claude-code", "antigravity", "agent-skills", "git"]
+}

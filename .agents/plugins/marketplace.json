@@ -1,0 +1,12 @@
+{
+  "name": "baton",
+  "interface": { "displayName": "Baton" },
+  "plugins": [
+    {
+      "name": "baton",
+      "source": { "source": "local", "path": "./" },
+      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
+      "category": "Productivity"
+    }
+  ]
+}

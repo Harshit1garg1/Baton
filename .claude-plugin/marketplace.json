@@ -1,0 +1,13 @@
+{
+  "name": "baton",
+  "description": "Portable multi-agent collaboration skills for coding projects.",
+  "owner": { "name": "Harshit1garg1" },
+  "plugins": [
+    {
+      "name": "baton",
+      "source": "./",
+      "description": "Task ownership, Git checkpoints and handoffs for coding agents.",
+      "version": "0.1.0"
+    }
+  ]
+}
