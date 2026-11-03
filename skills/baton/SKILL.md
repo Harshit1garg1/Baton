@@ -1,5 +1,6 @@
 ---
 name: baton
+license: MIT
 description: Coordinate coding agents on a shared local project with task ownership, file claims, Git checkpoints, context handoffs, independent review and recovery. Use when the user requests collaboration between agents such as Codex, Claude Code or Antigravity.
 ---
 
